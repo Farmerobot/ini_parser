@@ -3,13 +3,33 @@
 #include <string.h>
 #include <ctype.h>
 
-typedef struct
+typedef struct Section
 {
     char *name;
     int number_of_keys;
     char **keys;
     char **values;
+
+    struct Section *next;
 } Section;
+
+char *trim_whitespace(char *str)
+{
+    // trim front
+    while (isspace(*str))
+    {
+        str++;
+    }
+
+    // trim back
+    char *end = str + strlen(str) - 2;
+    while (isspace(*end))
+    {
+        end--;
+    }
+    end[1] = '\0';
+    return str;
+}
 
 int main(int argc, char *argv[])
 {
@@ -50,6 +70,8 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    Section *head = NULL;
+
     char *line = NULL;
     size_t line_size = 0;
     ssize_t len = getline(&line, &line_size, ini_file);
@@ -57,39 +79,69 @@ int main(int argc, char *argv[])
     // -1 on EOF or error
     while (len >= 0)
     {
-        // trim front
-        while (isspace(*line))
-        {
-            line++;
-            len--;
-        }
+        line = trim_whitespace(line);
+        len = strlen(line);
 
-        // trim back
-        char *end = line + len - 2;
-        while (isspace(*end))
-        {
-            end--;
-            len--;
-        }
-        end[1] = '\0';
-        
-        // found section
-        if (line[0] == '[' && line[len - 2] == ']')
+        char *equals = strchr(line, '=');
+
+        // Ignore empty
+        if (line[0] == ';' || line[0] == '\0')
         {
 
+            // found section
+        }
+        else if (line[0] == '[' && line[len - 1] == ']')
+        {
             // Remove brackets
-            line[len - 2] = '\0';
+            line[len - 1] = '\0';
             line++;
             len -= 2;
 
             // Create struct
-            Section *new_section = malloc(sizeof(Section));
+            Section *new_section;
+            new_section = malloc(sizeof(Section));
             new_section->name = malloc(len * sizeof(line));
+            new_section->number_of_keys = 0;
+
+            if (head == NULL)
+            {
+                head = new_section;
+            }
+            else
+            {
+                head->next = new_section;
+                new_section = head;
+            }
             strcpy(new_section->name, line);
+
             // Same as above
             // new_section -> name = strdup(line);
 
-            printf("%s\n", new_section->name);
+            for (int i = 0; i < len; i++)
+            {
+                char cur = new_section->name[i];
+                if (!isalnum(cur) && cur != '-')
+                {
+                    printf("Invalid section name: [%s]\n", new_section->name);
+                    len = getline(&line, &line_size, ini_file);
+                }
+            }
+
+            printf("Head:    %s\n", head->name);
+            printf("Section: %s\n", new_section->name);
+            // found key
+        }
+        else if (equals != NULL)
+        {
+            *equals = '\0';
+            char *new_key = trim_whitespace(line);
+            char *new_value = trim_whitespace(equals + 1);
+            
+            if (head == NULL) {
+                printf("Invalid key - no section found for '%s'\n", new_key);
+                len = getline(&line, &line_size, ini_file);
+                continue;
+            }
         }
         // printf("%d\n", len);
         // printf("Len: %zd, len: %zd\n", line_size, len);
