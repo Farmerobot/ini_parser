@@ -263,8 +263,11 @@ int main(int argc, char *argv[])
     // -1 on EOF or error
     while ((len = getline(&buffer, &line_size, ini_file)) > 0)
     {
-        line = strdup(buffer);
-        line = trim_whitespace(line);
+        line = trim_whitespace(buffer);
+        if (line == NULL) {
+            printf("Memory error\n");
+            return 1;
+        }
         // len = strlen(line);
         int length = strlen(line);
 
@@ -443,10 +446,12 @@ int main(int argc, char *argv[])
             // Evaluate 2 strings
             else
             {
-                if (operator== '+')
+                if (operator == '+')
                 {
                     printf("The value of the expression is: [%s%s]\n", target_value_0, target_value_1);
-                } else {
+                }
+                else
+                {
                     printf("Invalid operation\n");
                 }
             }
@@ -454,7 +459,9 @@ int main(int argc, char *argv[])
     }
 
     fclose(ini_file);
-    free(line);
+    free(buffer);
+    free(target_value_0);
+    free(target_value_1);
     free_list(head);
 
     return 0;
